@@ -29,7 +29,18 @@ try:
 except:
     _MTMD = False
 
-chat_handlers = ["None", "LLaVA-1.5", "LLaVA-1.6", "Moondream2", "nanoLLaVA", "llama3-Vision-Alpha", "MiniCPM-v2.6", "MiniCPM-v4.5", "MiniCPM-v4.5-Thinking"]
+chat_handlers = [
+    "None",
+    "LLaVA-1.5",
+    "LLaVA-1.6",
+    "Moondream2",
+    "nanoLLaVA",
+    "llama3-Vision-Alpha",
+    "MiniCPM-v2.6",
+    "MiniCPM-v4.5",
+    "MiniCPM-v4.5-Thinking",
+    "Qwen3.5-UAgg",
+]
 
 try:
     from llama_cpp.llama_chat_format import Gemma3ChatHandler
@@ -73,6 +84,7 @@ class AnyType(str):
     def __ne__(self, __value: object) -> bool:
         return False
 
+
 class LLAMA_CPP_STORAGE:
     llm = None
     chat_handler = None
@@ -91,126 +103,161 @@ class LLAMA_CPP_STORAGE:
             #cls.states.pop(f"{id}", None)
             cls.messages.pop(f"{id}", None)
             cls.sys_prompts.pop(f"{id}", None)
-        
+
     @classmethod
     def clean(cls, all=False):
         try:
             cls.llm.close()
         except Exception:
             pass
-            
+
         try:
             cls.chat_handler._exit_stack.close()
         except Exception:
             pass
-        
+
         cls.llm = None
         cls.chat_handler = None
         cls.current_config = None
         if all:
             cls.clean_state()
-        
+
         gc.collect()
         mm.soft_empty_cache()
-    
-    @classmethod
-    def load_model(cls, config):
-        def get_chat_handler(chat_handler):
-            match chat_handler:
-                case "Qwen3.5"|"Qwen3.5-Thinking":
-                    return Qwen35ChatHandler
-                case "Qwen3-VL"|"Qwen3-VL-Thinking":
-                    return Qwen3VLChatHandler
-                case "Qwen2.5-VL":
-                    return Qwen25VLChatHandler
-                case "LLaVA-1.5":
-                    return Llava15ChatHandler
-                case "LLaVA-1.6":
-                    return Llava16ChatHandler
-                case "Moondream2":
-                    return MoondreamChatHandler
-                case "nanoLLaVA":
-                    return NanoLlavaChatHandler
-                case "llama3-Vision-Alpha":
-                    return Llama3VisionAlphaChatHandler
-                case "MiniCPM-v2.6":
-                    return MiniCPMv26ChatHandler
-                case "MiniCPM-v4.5"|"MiniCPM-v4.5-Thinking":
-                    return MiniCPMv26ChatHandler
-                case "Gemma3":
-                    return Gemma3ChatHandler
-                case "GLM-4.6V"|"GLM-4.6V-Thinking":
-                    return GLM46VChatHandler
-                case "GLM-4.1V-Thinking":
-                    return GLM41VChatHandler
-                case "LFM2-VL":
-                    return LFM2VLChatHandler
-                case "Granite-Docling":
-                    return GraniteDoclingChatHandler
-                case "None":
-                    return None
-                case _:
-                    raise ValueError(f'Unknow model type: "{chat_handler}"')
-        
-        cls.clean(all=True)
-        cls.current_config = config.copy()
-        model = config["model"]
-        mmproj = config["mmproj"]
-        chat_handler = config["chat_handler"]
-        n_ctx = config["n_ctx"]
-        vram_limit = config["vram_limit"]
-        image_max_tokens = config["image_max_tokens"]
-        image_min_tokens = config["image_min_tokens"]
-        n_gpu_layers = -1
-        
-        model_path = os.path.join(folder_paths.models_dir, 'LLM', model)
-        handler = get_chat_handler(chat_handler)
-        
-        if vram_limit != -1:
-            gguf_layers = get_layer_count(model_path) or 32
-            gguf_size = os.path.getsize(model_path)  * 1.55 / (1024 ** 3)
-            gguf_layer_size = gguf_size / gguf_layers
-        
-        if mmproj and mmproj != "None":
-            mmproj_path = os.path.join(folder_paths.models_dir, 'LLM', mmproj)
-            if chat_handler == "None":
-                raise ValueError('"chat_handler" cannot be None!')
-            
-            if vram_limit != -1:
-                mmproj_size = os.path.getsize(mmproj_path)  * 1.55 / (1024 ** 3)
-                n_gpu_layers = max(1, int((vram_limit - mmproj_size) / gguf_layer_size))
-            
-            print(f"[llama-cpp_vlm] Loading clip:  {mmproj}")
-            
-            think_mode = "Thinking" in chat_handler
-            kwargs = {"clip_model_path": mmproj_path, "verbose": False}
-            if chat_handler in ["Qwen3-VL", "Qwen3-VL-Thinking"]:
-                kwargs["force_reasoning"] = think_mode
-                kwargs["image_max_tokens"] = image_max_tokens
-                kwargs["image_min_tokens"] = image_min_tokens
-            elif chat_handler in ["MiniCPM-v4.5", "GLM-4.6V", "Qwen3.5"]:
-                kwargs["enable_thinking"] = think_mode
 
-            if _MTMD:
-                kwargs["image_max_tokens"] = image_max_tokens
-                kwargs["image_min_tokens"] = image_min_tokens
+    @classmethod
+def load_model(cls, config):
+    def get_chat_handler(chat_handler):
+        match chat_handler:
+            case "Qwen3.5-UAgg":
+                return None
+            case "Qwen3.5"|"Qwen3.5-Thinking":
+                return Qwen35ChatHandler
+            case "Qwen3-VL"|"Qwen3-VL-Thinking":
+                return Qwen3VLChatHandler
+            case "Qwen2.5-VL":
+                return Qwen25VLChatHandler
+            case "LLaVA-1.5":
+                return Llava15ChatHandler
+            case "LLaVA-1.6":
+                return Llava16ChatHandler
+            case "Moondream2":
+                return MoondreamChatHandler
+            case "nanoLLaVA":
+                return NanoLlavaChatHandler
+            case "llama3-Vision-Alpha":
+                return Llama3VisionAlphaChatHandler
+            case "MiniCPM-v2.6":
+                return MiniCPMv26ChatHandler
+            case "MiniCPM-v4.5"|"MiniCPM-v4.5-Thinking":
+                return MiniCPMv26ChatHandler
+            case "Gemma3":
+                return Gemma3ChatHandler
+            case "GLM-4.6V"|"GLM-4.6V-Thinking":
+                return GLM46VChatHandler
+            case "GLM-4.1V-Thinking":
+                return GLM41VChatHandler
+            case "LFM2-VL":
+                return LFM2VLChatHandler
+            case "Granite-Docling":
+                return GraniteDoclingChatHandler
+            case "None":
+                return None
+            case _:
+                raise ValueError(f'Unknow model type: "{chat_handler}"')
+
+    cls.clean(all=True)
+    cls.current_config = config.copy()
+    model = config["model"]
+    mmproj = config["mmproj"]
+    chat_handler = config["chat_handler"]
+    n_ctx = config["n_ctx"]
+    vram_limit = config["vram_limit"]
+    image_max_tokens = config["image_max_tokens"]
+    image_min_tokens = config["image_min_tokens"]
+    n_gpu_layers = -1
+
+    model_path = os.path.join(folder_paths.models_dir, 'LLM', model)
+    handler = get_chat_handler(chat_handler)
+
+    if vram_limit != -1:
+        gguf_layers = get_layer_count(model_path) or 32
+        gguf_size = os.path.getsize(model_path) * 1.55 / (1024 ** 3)
+        gguf_layer_size = gguf_size / gguf_layers
+
+    if chat_handler == "Qwen3.5-UAgg":
+        if mmproj and mmproj != "None":
+            mmproj_path = os.path.join(folder_paths.models_dir, "LLM", mmproj)
+
+            if vram_limit != -1:
+                mmproj_size = os.path.getsize(mmproj_path) * 1.55 / (1024 ** 3)
+                n_gpu_layers = max(1, int((vram_limit - mmproj_size) / gguf_layer_size))
+
+            print(f"[llama-cpp_vlm] Qwen3.5-UAgg mode: loading clip {mmproj}")
+
+            kwargs = {
+                "clip_model_path": mmproj_path,
+                "verbose": False,
+                "image_max_tokens": image_max_tokens,
+                "image_min_tokens": image_min_tokens,
+            }
 
             try:
-                cls.chat_handler = handler(**kwargs)
+                cls.chat_handler = Qwen3VLChatHandler(**kwargs)
             except Exception as e:
-                raise RuntimeError(f"{e}\nPlease update llama-cpp-python from 'https://github.com/JamePeng/llama-cpp-python/releases'")
-
+                raise RuntimeError(
+                    f"Qwen3.5-UAgg vision fallback failed: {e}
+"
+                    "This likely means the current llama-cpp-python / backend still cannot initialize the mtmd/mmproj path for this model."
+                )
         else:
+            cls.chat_handler = None
             if vram_limit != -1:
                 n_gpu_layers = max(1, int(vram_limit / gguf_layer_size))
-            if handler is not None:
-                cls.chat_handler = handler(verbose=False)
-            else:
-                cls.chat_handler = None
-        
-        print(f"[llama-cpp_vlm] Loading model: {model}")
-        print(f"[llama-cpp_vlm] n_gpu_layers = {n_gpu_layers}")
-        cls.llm = Llama(model_path, chat_handler=cls.chat_handler, n_gpu_layers=n_gpu_layers, n_ctx=n_ctx, verbose=False)
+            print("[llama-cpp_vlm] Qwen3.5-UAgg mode: using GGUF chat_template")
+
+    elif mmproj and mmproj != "None":
+        mmproj_path = os.path.join(folder_paths.models_dir, 'LLM', mmproj)
+        if chat_handler == "None":
+            raise ValueError('"chat_handler" cannot be None!')
+
+        if vram_limit != -1:
+            mmproj_size = os.path.getsize(mmproj_path) * 1.55 / (1024 ** 3)
+            n_gpu_layers = max(1, int((vram_limit - mmproj_size) / gguf_layer_size))
+
+        print(f"[llama-cpp_vlm] Loading clip:  {mmproj}")
+
+        think_mode = "Thinking" in chat_handler
+        kwargs = {"clip_model_path": mmproj_path, "verbose": False}
+        if chat_handler in ["Qwen3-VL", "Qwen3-VL-Thinking"]:
+            kwargs["force_reasoning"] = think_mode
+            kwargs["image_max_tokens"] = image_max_tokens
+            kwargs["image_min_tokens"] = image_min_tokens
+        elif chat_handler in ["MiniCPM-v4.5", "GLM-4.6V", "Qwen3.5", "Qwen3.5-UAgg"]:
+            kwargs["enable_thinking"] = think_mode
+
+        if _MTMD:
+            kwargs["image_max_tokens"] = image_max_tokens
+            kwargs["image_min_tokens"] = image_min_tokens
+
+        try:
+            cls.chat_handler = handler(**kwargs)
+        except Exception as e:
+            raise RuntimeError(f"{e}
+Please update llama-cpp-python from 'https://github.com/JamePeng/llama-cpp-python/releases'")
+
+    else:
+        if vram_limit != -1:
+            n_gpu_layers = max(1, int(vram_limit / gguf_layer_size))
+        if handler is not None:
+            cls.chat_handler = handler(verbose=False)
+        else:
+            cls.chat_handler = None
+
+    print(f"[llama-cpp_vlm] Loading model: {model}")
+    print(f"[llama-cpp_vlm] n_gpu_layers = {n_gpu_layers}")
+    cls.llm = Llama(model_path, chat_handler=cls.chat_handler, n_gpu_layers=n_gpu_layers, n_ctx=n_ctx, verbose=False)
+
 
 any_type = AnyType("*")
 
@@ -440,12 +487,15 @@ class llama_cpp_instruct_adv:
                     if isinstance(item, dict) and item.get("type") == "image_url":
                         item["image_url"]["url"] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAADElEQVQImWP4//8/AAX+Av5Y8msOAAAAAElFTkSuQmCC"
         return clean_messages
-    
+
     def process(self, llama_model, preset_prompt, custom_prompt, system_prompt, inference_mode, max_frames, max_size, seed, force_offload, save_states, unique_id, parameters=None, images=None, queue_handler=None):
         if not LLAMA_CPP_STORAGE.llm:
             LLAMA_CPP_STORAGE.load_model(llama_model)
             #raise RuntimeError("The model has been unloaded or failed to load!")
-        
+
+        if images is not None and LLAMA_CPP_STORAGE.chat_handler is None:
+            raise ValueError("Image input detected, but the loaded model is not configured with a mmproj module.")
+
         if parameters is None:
             parameters = {
                 "max_tokens": 1024,
@@ -461,15 +511,15 @@ class llama_cpp_instruct_adv:
                 "mirostat_eta": 0.1,
                 "mirostat_tau": 5.0
             }
-        
+
         if _MTMD:
             parameters.pop("presence_penalty", None)
-            
+
         _uid = parameters.get("state_uid", None)
         _parameters = parameters.copy()
         _parameters.pop("state_uid", None)
         uid = unique_id.rpartition('.')[-1] if _uid in (None, -1) else _uid
-        
+
         last_sys_prompt = LLAMA_CPP_STORAGE.sys_prompts.get(f"{uid}", None)
         video_input = inference_mode == "video"
         system_prompts = "请将输入的图片序列当做视频而不是静态帧序列, " + system_prompt if video_input else system_prompt
@@ -497,16 +547,16 @@ class llama_cpp_instruct_adv:
         else:
             p = preset_prompts[preset_prompt].replace("#", custom_prompt.strip()).replace("@", "video" if video_input else "image")
             user_content.append({"type": "text", "text": p})
-            
+
         if images is not None:
             if not hasattr(LLAMA_CPP_STORAGE.chat_handler, "clip_model_path") or LLAMA_CPP_STORAGE.chat_handler.clip_model_path is None:
                  raise ValueError("Image input detected, but the loaded model is not configured with a mmproj module.")
-                
+
             frames = images
             if video_input:
                 indices = np.linspace(0, len(images) - 1, max_frames, dtype=int)
                 frames = [images[i] for i in indices]
-                
+
             if inference_mode == "one by one":
                 tmp_list = []
                 image_content = {
@@ -516,7 +566,7 @@ class llama_cpp_instruct_adv:
                 user_content.append(image_content)
                 messages.append({"role": "user", "content": user_content})
                 print(f"[llama-cpp_vlm] Start processing {len(frames)} images")
-                
+
                 for i, image in enumerate(cqdm(frames)):
                     if mm.processing_interrupted():
                         raise mm.InterruptProcessingException()
@@ -531,7 +581,7 @@ class llama_cpp_instruct_adv:
                     if len(frames) > 1:
                         tmp_list.append(f"====== Image {i+1} ======")
                     tmp_list.append(text)
-                    
+
                 out1 = "\n\n".join(tmp_list)
             else:
                 for image in frames:
@@ -544,7 +594,7 @@ class llama_cpp_instruct_adv:
                         "image_url": {"url": f"data:image/jpeg;base64,{data}"}
                     }
                     user_content.append(image_content)
-                    
+
                 messages.append({"role": "user", "content": user_content})
                 output = LLAMA_CPP_STORAGE.llm.create_chat_completion(messages=messages, seed=seed, **_parameters)
                 out1 = output['choices'][0]['message']['content'].removeprefix(": ").lstrip()
@@ -554,7 +604,7 @@ class llama_cpp_instruct_adv:
             output = LLAMA_CPP_STORAGE.llm.create_chat_completion(messages=messages, seed=seed, **_parameters)
             out1 = output['choices'][0]['message']['content'].removeprefix(": ").lstrip()
             out2 = [out1]
-            
+
         if save_states:
             print(f"[llama-cpp_vlm] Saving state id={uid}...")
             #LLAMA_CPP_STORAGE.states[f"{uid}"] = LLAMA_CPP_STORAGE.llm.save_state()
@@ -564,16 +614,16 @@ class llama_cpp_instruct_adv:
         else:
             if not LLAMA_CPP_STORAGE.messages.get(f"{uid}"):
                 LLAMA_CPP_STORAGE.sys_prompts.pop(f"{uid}", None)
-                
+
         if force_offload:
             LLAMA_CPP_STORAGE.clean()
         else:
-            if LLAMA_CPP_STORAGE.current_config["chat_handler"] in ["Qwen3.5", "Qwen3.5-Thinking"]:
+            if LLAMA_CPP_STORAGE.current_config["chat_handler"] in ["Qwen3.5", "Qwen3.5-Thinking", "Qwen3.5-UAgg"]:
                 LLAMA_CPP_STORAGE.llm.n_tokens = 0
                 LLAMA_CPP_STORAGE.llm._ctx.memory_clear(True)
                 if LLAMA_CPP_STORAGE.llm.is_hybrid and LLAMA_CPP_STORAGE.llm._hybrid_cache_mgr is not None:
                     LLAMA_CPP_STORAGE.llm._hybrid_cache_mgr.clear()
-            
+
         del messages
         gc.collect()
         return (out1, out2, uid)

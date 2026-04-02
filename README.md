@@ -1,6 +1,31 @@
 # ComfyUI-llama-cpp_vlm-Q3.5UAgg
-Run LLM/VLM models natively in ComfyUI based on llama.cpp  
-**[[📃中文版](./README_zh.md)]** 
+Summary (Requirements & Capabilities)
+🚀 What This Fork Enables
+Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive now supports image and video understanding
+Fully integrated with ComfyUI + llama.cpp (GGUF) pipeline
+Enables vision-based workflows inside ComfyUI
+Requirements
+
+Model (GGUF)
+
+Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q8_0.gguf
+
+Matching mmproj (Required)
+
+mmproj-Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-f16.gguf
+Must match the model (e.g. 35B ↔ 35B)
+Mixing (9B ↔ 35B) will break
+llama-cpp-python (Working Build)
+GGUF loading
+Qwen3.5 handler
+Vision (mmproj) support
+Modified ComfyUI Custom Node
+Added support for:
+Qwen3.5-UAgg
+Vision (image/video) processing
+Key Point
+
+This fork makes Qwen3.5-UAgg usable as a vision model (image & video) within the llama.cpp + ComfyUI ecosystem.
 
 ## Preview  
 ![](./img/preview.jpg)

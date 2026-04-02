@@ -49,8 +49,12 @@ Added support for:
 #### Install the node:  
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/lihaoyun6/ComfyUI-llama-cpp.git
-python -m pip install -r ComfyUI-llama-cpp/requirements.txt
+
+# Clone this fork (Qwen3.5-UAgg supported version)
+git clone https://github.com/yumi-ai-lab/ComfyUI-llama-cpp_vlm-Q3.5UAgg.git
+
+# Install dependencies
+python -m pip install -r ComfyUI-llama-cpp_vlm-Q3.5UAgg/requirements.txt
 ```
 
 #### Download models:  

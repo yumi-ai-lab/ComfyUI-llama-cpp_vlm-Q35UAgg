@@ -42,7 +42,7 @@ Added support for:
 
 
 ## Preview  
-![](./img/preview.jpg)
+![](./img/preview.png)
 
 ## Installation  
 
